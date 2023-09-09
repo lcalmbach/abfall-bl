@@ -1,0 +1,1 @@
+INTRO = "Abfallproduktion und Recycling-Raten der Gemeinden im Kanton BL werden auf dem OGD-Portal des Kantons Baselland publiziert. Die App Abfall-BL gibt erlaubt es, diese Zahlen in aussagekräftigen Tabellen und Grafiken auszugeben. Sie können damit die zeitliche Entwicklung sowie Unterschiede zwischen den Gemeinden einfacher eruieren."
