@@ -8,12 +8,12 @@ import pytz
 import plots
 import text
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __author__ = "Lukas Calmbach"
 __author_email__ = "lcalmbach@gmail.com"
 VERSION_DATE = "2023-09-10"
 my_title = "Abfall-BL"
-my_icon = "🛢️"
+my_icon = "♻️"
 SOURCE_URL = "https://data.bl.ch/api/explore/v2.1/catalog/datasets/12060/exports/csv?lang=de&timezone=Europe%2FParis&use_labels=false&delimiter=%3B"
 SOURCE_FILE = "./12060.csv"
 SOURCE_BEV_URL = "./10040.csv"
