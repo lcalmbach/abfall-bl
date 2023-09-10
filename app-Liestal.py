@@ -28,12 +28,13 @@ utc = pytz.UTC
 
 KEHRICHT = "Hauskehricht + Sperrgut"
 
+
 def init():
     st.set_page_config(  # Alternate names: setup_page, page, layout
         initial_sidebar_state="auto",
         page_title=my_title,
         page_icon=my_icon,
-        layout="wide"
+        layout="wide",
     )
     load_css()
 
@@ -91,7 +92,7 @@ def get_data():
     # df = pd.read_csv(SOURCE_FILE, sep=';')
     # if df[jahr]
     df = pd.read_csv(SOURCE_URL, sep=";")
-    df = df[df['jahr'] > 2017]
+    df = df[df["jahr"] > 2017]
     df_bev = pd.read_csv(SOURCE_BEV_URL, sep=";")
     df_bev = df_bev[["jahr", "gemeinde_nummer", "gemeinde", "endbestand"]]
     df_bev = df_bev[df_bev["jahr"] > 2017]
@@ -182,49 +183,54 @@ def show_plots(df):
         }
         plots.line_chart(filtered_df, settings)
 
+
 def get_total_df(_df, gemeinde):
-        if gemeinde != None:
-            _df = _df[_df['gemeinde'] == gemeinde]
-            _df = _df[['jahr', 'wert']]
-            result = _df.groupby('jahr').sum().reset_index()
-        else:
-            _df = _df[['gemeinde', 'jahr', 'wert']]
-            result = _df.groupby(['gemeinde', 'jahr']).sum().reset_index()
-        return result
+    if gemeinde != None:
+        _df = _df[_df["gemeinde"] == gemeinde]
+        _df = _df[["jahr", "wert"]]
+        result = _df.groupby("jahr").sum().reset_index()
+    else:
+        _df = _df[["gemeinde", "jahr", "wert"]]
+        result = _df.groupby(["gemeinde", "jahr"]).sum().reset_index()
+    return result
 
 
 def get_gemeinde_rank(df, gemeinde):
-    df['rang'] = df["wert"].rank(ascending=False)
-    return df[df['gemeinde'] == gemeinde].iloc[0]['rang']
+    df["rang"] = df["wert"].rank(ascending=False)
+    return df[df["gemeinde"] == gemeinde].iloc[0]["rang"]
 
 
 def get_general_text(df_kg, df_t, gemeinde):
     total_gemeinde_t_df = get_total_df(df_t, gemeinde)
     kehricht = "Hauskehricht + Sperrgut"
-    first_year_waste_t = total_gemeinde_t_df[
-        (total_gemeinde_t_df["jahr"] == YEARS[0])
-    ].iloc[0]["wert"].round(0)
-    last_year_waste_t = total_gemeinde_t_df[
-        (total_gemeinde_t_df["jahr"] == YEARS[-1])
-    ].iloc[0]["wert"].round(0)
-    qualifier_diff_t = (
-        "mehr" if last_year_waste_t > first_year_waste_t else "weniger"
+    first_year_waste_t = (
+        total_gemeinde_t_df[(total_gemeinde_t_df["jahr"] == YEARS[0])]
+        .iloc[0]["wert"]
+        .round(0)
     )
+    last_year_waste_t = (
+        total_gemeinde_t_df[(total_gemeinde_t_df["jahr"] == YEARS[-1])]
+        .iloc[0]["wert"]
+        .round(0)
+    )
+    qualifier_diff_t = "mehr" if last_year_waste_t > first_year_waste_t else "weniger"
 
     total_gemeinde_kg_df = get_total_df(df_kg, gemeinde)
-    
-    first_year_waste_kg = total_gemeinde_kg_df[
-        (total_gemeinde_kg_df["jahr"] == YEARS[0])
-    ].iloc[0]["wert"].round(0)
-    last_year_waste_kg = total_gemeinde_kg_df[
-        (total_gemeinde_kg_df["jahr"] == YEARS[-1])
-    ].iloc[0]["wert"].round(0)
-    qualifier_diff_kg = (
-        "stieg" if last_year_waste_kg > first_year_waste_kg else "sank"
+
+    first_year_waste_kg = (
+        total_gemeinde_kg_df[(total_gemeinde_kg_df["jahr"] == YEARS[0])]
+        .iloc[0]["wert"]
+        .round(0)
     )
+    last_year_waste_kg = (
+        total_gemeinde_kg_df[(total_gemeinde_kg_df["jahr"] == YEARS[-1])]
+        .iloc[0]["wert"]
+        .round(0)
+    )
+    qualifier_diff_kg = "stieg" if last_year_waste_kg > first_year_waste_kg else "sank"
     increase_pct = abs(first_year_waste_t - last_year_waste_t) / first_year_waste_t
     rank_basis_df = get_total_df(df_kg, None)
-    rank_basis_df = rank_basis_df[rank_basis_df['jahr'] == YEARS[-1]]
+    rank_basis_df = rank_basis_df[rank_basis_df["jahr"] == YEARS[-1]]
     rank = get_gemeinde_rank(rank_basis_df, gemeinde)
     text = f"""Die Gemeinde {gemeinde} hat im Jahr {YEARS[-1]} {last_year_waste_t: .1f} Tonnen Abfall 
     produziert, {abs(last_year_waste_t - first_year_waste_t)} Tonnen {qualifier_diff_t} als in {YEARS[0]}. Der pro Kopf Verbrauch {qualifier_diff_kg}
@@ -237,15 +243,23 @@ def get_general_text(df_kg, df_t, gemeinde):
 def get_category_text(df_t, df_kg, kategorie, gemeinde):
     df_kg["rank"] = df_kg["wert"].rank(ascending=False)
     df_t["rank"] = df_t["wert"].rank(ascending=False)
-    generate_expr = 'produziert' if kategorie == KEHRICHT else 'gerecycelt'
-    consumption_expr = 'Verbrauch' if kategorie == KEHRICHT else 'Recycling'
-    
-    first_year_t = df_t[(df_t["jahr"] == YEARS[0]) & (df_t["gemeinde"] == gemeinde)].iloc[0]["wert"]
-    last_year_t = df_t[(df_t["jahr"] == YEARS[-1]) & (df_t["gemeinde"] == gemeinde)].iloc[0]["wert"]
-    first_year_kg = df_kg[(df_kg["jahr"] == YEARS[0]) & (df_kg["gemeinde"] == gemeinde)].iloc[0]["wert"]
-    last_year_kg = df_kg[(df_kg["jahr"] == YEARS[-1]) & (df_kg["gemeinde"] == gemeinde)].iloc[0]["wert"]
+    generate_expr = "produziert" if kategorie == KEHRICHT else "gerecycelt"
+    consumption_expr = "Verbrauch" if kategorie == KEHRICHT else "Recycling"
+
+    first_year_t = df_t[
+        (df_t["jahr"] == YEARS[0]) & (df_t["gemeinde"] == gemeinde)
+    ].iloc[0]["wert"]
+    last_year_t = df_t[
+        (df_t["jahr"] == YEARS[-1]) & (df_t["gemeinde"] == gemeinde)
+    ].iloc[0]["wert"]
+    first_year_kg = df_kg[
+        (df_kg["jahr"] == YEARS[0]) & (df_kg["gemeinde"] == gemeinde)
+    ].iloc[0]["wert"]
+    last_year_kg = df_kg[
+        (df_kg["jahr"] == YEARS[-1]) & (df_kg["gemeinde"] == gemeinde)
+    ].iloc[0]["wert"]
     rank_basis_df = get_total_df(df_kg, None)
-    rank_basis_df = rank_basis_df[rank_basis_df['jahr'] == YEARS[-1]]
+    rank_basis_df = rank_basis_df[rank_basis_df["jahr"] == YEARS[-1]]
     rank = get_gemeinde_rank(rank_basis_df, gemeinde)
     if last_year_t > 0:
         text = f"""**{kategorie}**: Es wurden in {YEARS[-1]} in {gemeinde} {last_year_t: .1f} Tonnen {kategorie} {generate_expr}, dies entspricht
@@ -262,15 +276,15 @@ def show_commune_report(df):
     gemeinde = st.sidebar.selectbox("Gemeinde", options=options_gemeinden)
     kateborie = st.sidebar.selectbox("Kategorie", options=options_kategorie)
     st.subheader(f"Zusammenfassung Gemeinde {gemeinde}")
-    
+
     df_kg = df[df["einheit"] == "kg pro Einw."]
     df_t = df[df["einheit"] == "Tonnen"]
     st.markdown("**Abfall total**")
     text = get_general_text(df_kg, df_t, gemeinde)
     st.markdown(text)
     for kategorie in options_kategorie:
-        df_kategorie_t = df_t[df['kategorie'] == kategorie]
-        df_kategorie_kg = df_kg[df['kategorie'] == kategorie]
+        df_kategorie_t = df_t[df["kategorie"] == kategorie]
+        df_kategorie_kg = df_kg[df["kategorie"] == kategorie]
         text = get_category_text(df_kategorie_t, df_kategorie_kg, kategorie, gemeinde)
         if text > "":
             st.markdown(text)

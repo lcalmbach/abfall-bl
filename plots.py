@@ -130,7 +130,7 @@ def barchart(df, settings):
             stroke=None,
         )
     """
-    sort_field = settings["y"].replace(":Q", "")
+    sort_field = settings["x"].replace(":Q", "")
     chart = (
         alt.Chart(df)
         .mark_bar()
@@ -138,9 +138,12 @@ def barchart(df, settings):
             x=alt.X(
                 settings["x"],
                 title=settings["x_title"],
+            ),
+            y=alt.Y(
+                settings["y"],
+                title=settings["y_title"],
                 sort=alt.EncodingSortField(field=sort_field, order="descending"),
             ),
-            y=alt.Y(settings["y"], title=settings["y_title"]),
             tooltip=settings["tooltip"],
         )
     )
