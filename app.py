@@ -8,7 +8,7 @@ import pytz
 import plots
 import text
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 __author__ = "Lukas Calmbach"
 __author_email__ = "lcalmbach@gmail.com"
 VERSION_DATE = "2023-09-10"
@@ -178,7 +178,7 @@ def show_plots(df):
         if filter["einheit"] == "menge_t":
             filtered_df = filtered_df[filtered_df["gemeinde"] != "Kanton"]
 
-        h = 2000 if filter["gemeinden"] == [] else 2000 / 86 * len(filter["gemeinden"])
+        h = 2000 if filter["gemeinden"] == [] else 400 + 1800 / 86 * len(filter["gemeinden"])
         settings = {
             "y": "gemeinde",
             "x": f"{filter['einheit']}:Q",
@@ -325,6 +325,7 @@ def get_category_text(df, kategorie, gemeinde):
 
 def show_commune_report(waste_df, pop_df):
     options_gemeinden = sorted(list(pop_df["gemeinde"].unique()))
+    options_gemeinden.remove('Kanton')
     options_kategorie = sorted(list(waste_df["kategorie"].unique()))
     gemeinde = st.sidebar.selectbox("Gemeinde", options=options_gemeinden)
     einwohner = pop_df[
