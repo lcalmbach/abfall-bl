@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
-import const
 
 MONTHS_REV_DICT = {
     "Jan": 1,

@@ -2,25 +2,25 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import pandas as pd
 from datetime import date
-from utilities import load_css
-import pytz
+import os
 
 import plots
 import text
+from utilities import load_css
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 __author__ = "Lukas Calmbach"
 __author_email__ = "lcalmbach@gmail.com"
-VERSION_DATE = "2023-09-10"
+VERSION_DATE = "2023-09-11"
 my_title = "Abfall-BL"
 my_icon = "♻️"
-SOURCE_URL = "https://data.bl.ch/api/explore/v2.1/catalog/datasets/12060/exports/csv?lang=de&timezone=Europe%2FParis&use_labels=false&delimiter=%3B"
-SOURCE_FILE = "./12060.csv"
-SOURCE_BEV_URL = "./10040.csv"
-GIT_REPO = "https://github.com/lcalmbach/abfall-bl"
-YEARS = range(2018, date.today().year)
-utc = pytz.UTC
 
+SOURCE_URL = "https://data.bl.ch/api/explore/v2.1/catalog/datasets/12060/exports/csv?lang=de&timezone=Europe%2FParis&use_labels=false&delimiter=%3B"
+SOURCE_BEV_URL = "https://data.bl.ch/api/explore/v2.1/catalog/datasets/10040/exports/csv?lang=de&timezone=Europe%2FParis&use_labels=false&delimiter=%3B"
+GIT_REPO = "https://github.com/lcalmbach/abfall-bl"
+LOCAL_DATA_WASTE = './local_data_waste.parquet'
+LOCAL_DATA_BEV = './local_data_bev.parquet'
+YEARS = range(2018, date.today().year)
 KEHRICHT = "Hauskehricht + Sperrgut"
 FIRST_YEAR = 2018
 INTRO_IMAGE = "./waste.jpg"
@@ -76,6 +76,9 @@ def get_filter(filter: dict, df: pd.DataFrame):
 
 
 def get_show_intro():
+    """
+    Processes the show intro menu item, desplaying a introductory text.
+    """
     text = f"""<div style="background-color:#34282C; padding: 10px;border-radius: 15px; border:solid 1px white;">
     <small>App von <a href="mailto:{__author_email__}">{__author__}</a><br>
     Version: {__version__} ({VERSION_DATE})<br>
@@ -87,48 +90,67 @@ def get_show_intro():
 
 @st.cache_data(ttl=6 * 3600, max_entries=3)
 def get_data():
-    # read waste data
-    waste_df = pd.read_csv(SOURCE_URL, sep=";")
-    # pivot units and remove column unit. this makes it easier to calculate
-    # the numbers for the canton
-    waste_df = waste_df[
-        (waste_df["jahr"] >= FIRST_YEAR) & (waste_df["einheit"] == "Tonnen")
-    ]
-    waste_df = waste_df[waste_df["kategorie"] != "Kunststoffe"]
-    waste_df.drop(columns=["einheit"], inplace=True)
-    waste_df = waste_df.rename(columns={"wert": "menge_t"})
-    # add total for canton
-    group_fields = ["jahr", "kategorie"]
-    grouped = (
-        waste_df[group_fields + ["menge_t"]].groupby(group_fields).sum().reset_index()
-    )
-    grouped["bfs_gemeindenummer"] = 0
-    grouped["gemeinde"] = "Kanton"
-    waste_df = pd.concat([waste_df, grouped], ignore_index=True)
+    """
+    Retrieves waste data and population data from local files or online sources.
+    If the local data file exists, it reads the data from the file, otherwise it downloads
+    the data from the specified URL. It then processes the population data is merged 
+    into the waste data and saved as a parquet file and returns the merged DataFrame and 
+    the population DataFrame.
 
-    pop_df = pd.read_csv(SOURCE_BEV_URL, sep=";")
-    pop_df = pop_df[["jahr", "gemeinde", "endbestand", "anfangsbestand"]]
-    pop_df["mittl_bestand"] = (pop_df["endbestand"] + pop_df["anfangsbestand"]) / 2
-    pop_df = pop_df[pop_df["jahr"] >= FIRST_YEAR]
-    # add total for canton
-    group_fields = ["jahr"]
-    grouped = (
-        pop_df[["jahr", "endbestand", "anfangsbestand", "mittl_bestand"]]
-        .groupby(["jahr"])
-        .sum()
-        .reset_index()
-    )
-    grouped["bfs_gemeindenummer"] = 0
-    grouped["gemeinde"] = "Kanton"
-    pop_df = pd.concat([pop_df, grouped], ignore_index=True)
+    Returns:
+        merged_df (pandas.DataFrame): Merged DataFrame containing waste data and population data
+        pop_df (pandas.DataFrame): DataFrame containing population data
 
-    merged_df = waste_df.merge(
-        pop_df, on=["gemeinde", "jahr"], how="left"
-    ).reset_index()
-    # calculate per capita kg consumption/production of waste
-    merged_df["menge_kg_pro_kopf"] = (
-        merged_df["menge_t"] / merged_df["mittl_bestand"] * 1000
-    ).round(1)
+    """
+
+    if os.path.exists(LOCAL_DATA_WASTE):
+        merged_df = pd.read_parquet(LOCAL_DATA_WASTE)
+        pop_df = pd.read_parquet(LOCAL_DATA_WASTE)
+    else:
+        # read waste data
+        waste_df = pd.read_csv(SOURCE_URL, sep=";")
+        # pivot units and remove column unit. this makes it easier to calculate
+        # the numbers for the canton
+        waste_df = waste_df[
+            (waste_df["jahr"] >= FIRST_YEAR) & (waste_df["einheit"] == "Tonnen")
+        ]
+        waste_df = waste_df[waste_df["kategorie"] != "Kunststoffe"]
+        waste_df.drop(columns=["einheit"], inplace=True)
+        waste_df = waste_df.rename(columns={"wert": "menge_t"})
+        # add total for canton
+        group_fields = ["jahr", "kategorie"]
+        grouped = (
+            waste_df[group_fields + ["menge_t"]].groupby(group_fields).sum().reset_index()
+        )
+        grouped["bfs_gemeindenummer"] = 0
+        grouped["gemeinde"] = "Kanton"
+        waste_df = pd.concat([waste_df, grouped], ignore_index=True)
+
+        pop_df = pd.read_csv(SOURCE_BEV_URL, sep=";")
+        pop_df = pop_df[["jahr", "gemeinde", "endbestand", "anfangsbestand"]]
+        pop_df["mittl_bestand"] = (pop_df["endbestand"] + pop_df["anfangsbestand"]) / 2
+        pop_df = pop_df[pop_df["jahr"] >= FIRST_YEAR]
+        # add total for canton
+        group_fields = ["jahr"]
+        grouped = (
+            pop_df[["jahr", "endbestand", "anfangsbestand", "mittl_bestand"]]
+            .groupby(["jahr"])
+            .sum()
+            .reset_index()
+        )
+        grouped["bfs_gemeindenummer"] = 0
+        grouped["gemeinde"] = "Kanton"
+        pop_df = pd.concat([pop_df, grouped], ignore_index=True)
+
+        merged_df = waste_df.merge(
+            pop_df, on=["gemeinde", "jahr"], how="left"
+        ).reset_index()
+        # calculate per capita kg consumption/production of waste
+        merged_df["menge_kg_pro_kopf"] = (
+            merged_df["menge_t"] / merged_df["mittl_bestand"] * 1000
+        ).round(1)
+        merged_df.to_parquet(LOCAL_DATA_WASTE, engine='pyarrow')
+        pop_df.to_parquet(LOCAL_DATA_BEV, engine='pyarrow')
     return merged_df, pop_df
 
 
