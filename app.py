@@ -8,10 +8,10 @@ import plots
 import text
 from utilities import load_css
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 __author__ = "Lukas Calmbach"
 __author_email__ = "lcalmbach@gmail.com"
-VERSION_DATE = "2023-09-11"
+VERSION_DATE = "2023-09-12"
 my_title = "Abfall-BL"
 my_icon = "♻️"
 
@@ -82,7 +82,7 @@ def get_show_intro():
     text = f"""<div style="background-color:#34282C; padding: 10px;border-radius: 15px; border:solid 1px white;">
     <small>App von <a href="mailto:{__author_email__}">{__author__}</a><br>
     Version: {__version__} ({VERSION_DATE})<br>
-    Datenquelle: <a href="https://data.bl.ch/explore/dataset/12060/">OGD Baselland</a><br>
+    Datenquelle: <a href="https://data.bl.ch/explore/dataset/12060/">OGD Basel-Landschaft</a><br>
     <a href="{GIT_REPO}">git-repo</a></small></div>
     """
     return text
@@ -159,7 +159,7 @@ def show_intro(df):
     cols = st.columns([1, 4, 1])
     with cols[1]:
         st.subheader(
-            "Abfallmengen und Recycling in den Gemeinden des Kantons Baselland"
+            "Abfallmengen und Recycling in den Gemeinden des Kantons Basel-Landschaft"
         )
         st.markdown(text.INTRO)
 
@@ -308,7 +308,7 @@ def get_general_text(df, gemeinde):
     rank = get_gemeinde_rank(rank_basis_df, einheit, gemeinde)
     text = f"""**Abfall total**: Die Gemeinde {gemeinde} hat im Jahr {YEARS[-1]} insgesamt {last_year_waste_t: .1f} Tonnen Abfall 
     produziert, {abs(last_year_waste_t - first_year_waste_t)} Tonnen {qualifier_diff_t} als in {YEARS[0]}. Die pro Kopf Produktion {qualifier_diff_kg}
-    von {first_year_waste_kg} kg/Kopf in {YEARS[0]} auf {last_year_waste_kg} kg/Kopf in {YEARS[-1]} ({increase_pct * 100: .1f}%). Unter den Gemeinden des Kantons Baselland belegt 
+    von {first_year_waste_kg} kg/Kopf in {YEARS[0]} auf {last_year_waste_kg} kg/Kopf in {YEARS[-1]} ({increase_pct * 100: .1f}%). Unter den Gemeinden des Kantons Basel-Landschaft belegt 
     {gemeinde} beim Total des Abfalls in {YEARS[-1]} Rang {rank:.0f} von {rank_basis_df['rang'].max():.0f}.
     """
     return text
