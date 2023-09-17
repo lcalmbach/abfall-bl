@@ -3,15 +3,16 @@ from streamlit_option_menu import option_menu
 import pandas as pd
 from datetime import date
 import os
+import json
 
 import plots
 import text
 from utilities import load_css
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 __author__ = "Lukas Calmbach"
 __author_email__ = "lcalmbach@gmail.com"
-VERSION_DATE = "2023-09-12"
+VERSION_DATE = "2023-09-17"
 my_title = "Abfall-BL"
 my_icon = "♻️"
 
@@ -25,6 +26,7 @@ KEHRICHT = "Hauskehricht + Sperrgut"
 FIRST_YEAR = 2018
 INTRO_IMAGE = "./waste.jpg"
 UNITS = {"menge_t": "Tonnen", "menge_kg_pro_kopf": "kg pro Kopf"}
+GEMEINDE_JSON = "./gemeinden.json"
 
 
 def init():
@@ -126,6 +128,13 @@ def get_data():
         grouped["gemeinde"] = "Kanton"
         waste_df = pd.concat([waste_df, grouped], ignore_index=True)
 
+        # add total waste (sum of waste categories
+        group_fields = ["jahr", "gemeinde", "bfs_gemeindenummer"]
+        grouped = (
+            waste_df[group_fields + ["menge_t"]].groupby(group_fields).sum().reset_index()
+        )
+        grouped["kategorie"] = "Abfall Total"
+        waste_df = pd.concat([waste_df, grouped], ignore_index=True)
         pop_df = pd.read_csv(SOURCE_BEV_URL, sep=";")
         pop_df = pop_df[["jahr", "gemeinde", "endbestand", "anfangsbestand"]]
         pop_df["mittl_bestand"] = (pop_df["endbestand"] + pop_df["anfangsbestand"]) / 2
@@ -189,7 +198,7 @@ def stat_commune(df):
 
 
 def show_plots(df):
-    plot_options = ["Balkendiagramm", "Histogramm", "Zeitserie"]
+    plot_options = ["Balkendiagramm", "Histogramm", "Zeitserie", "Karte"]
     plot = st.sidebar.selectbox(label="Grafik", options=plot_options)
     if plot_options.index(plot) == 0:
         # todo
@@ -254,6 +263,24 @@ def show_plots(df):
             "title": f"Zeitserie ({filter['kategorie']})",
         }
         plots.line_chart(filtered_df, settings)
+    elif plot_options.index(plot) == 3:
+        filter = {"einheit": None, "jahr": None, "gemeinden": [], "kategorie": None}
+        filter, filtered_df = get_filter(filter, df)
+        with open(GEMEINDE_JSON, "r") as json_file:
+            var_geojson = json.load(json_file)
+        # Remove kanton for absoute unit, as it overwhelms all other numbers
+        if (filter["einheit"] == "menge_t") & (filter["gemeinden"] == []):
+            filtered_df = filtered_df[filtered_df["gemeinde"] != "Kanton"]
+        filtered_df = filtered_df.rename(columns={'bfs_gemeindenummer_x': 'BFS_Nummer'})
+        filtered_df = filtered_df[['BFS_Nummer', filter["einheit"]]]
+        settings = {
+            "selected_variable": filter["einheit"],
+            "var_geojson": var_geojson,
+            "width": 1000,
+            "height": 800,
+            "zoom": 11,
+        }
+        result = plots.chloropleth_chart(filtered_df, settings)
 
 
 def get_total_df(_df, einheit, gemeinde):

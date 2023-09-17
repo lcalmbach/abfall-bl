@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
+import folium
+from streamlit_folium import st_folium
 
 MONTHS_REV_DICT = {
     "Jan": 1,
@@ -18,6 +20,47 @@ MONTHS_REV_DICT = {
     "Dez": 12,
 }
 
+
+def chloropleth_chart(df, settings):
+    df_plot = df[["BFS_Nummer", settings["selected_variable"]]]
+    df_plot.fillna(-1, inplace=True)
+    for col in df_plot.columns:
+        df_plot[col] = df_plot[col].replace('( )', -1)
+        df_plot[col] = df_plot[col].astype('float64')
+
+    # center on Liberty Bell
+    coordinates = [47.45, 7.65]
+    # coordinates = [43, -100]
+
+    m = folium.Map(location=coordinates, zoom_start=settings["zoom"])
+    cp = folium.Choropleth(
+        geo_data=settings["var_geojson"],
+        name=settings["selected_variable"],
+        data=df_plot,
+        columns=["BFS_Nummer", settings["selected_variable"]],
+        key_on="feature.id",
+        fill_color="OrRd",
+        fill_opacity=0.8,
+        line_opacity=0.2,
+        highlight=True,
+    ).add_to(m)
+
+    df = df.set_index("BFS_Nummer")
+    for s in cp.geojson.data["features"]:
+        try:
+            value = float(df.loc[s["id"], settings["selected_variable"]])
+            s["properties"][settings["selected_variable"]] = value
+        except:
+            st.write(s["id"])
+    folium.GeoJsonTooltip(
+        ["Gemeinde", "BFS_Nummer", settings["selected_variable"]]
+    ).add_to(cp.geojson)
+    folium.LayerControl().add_to(m)
+    st_data = st_folium(m, height=settings["height"], width=settings["width"])
+    if not st_data["last_active_drawing"] is None:
+        return st_data["last_active_drawing"]["id"]
+    else:
+        return 0
 
 def line_chart(df, settings):
     title = settings["title"] if "title" in settings else ""
